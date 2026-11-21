@@ -75,7 +75,7 @@ When you launch DropLite, it automatically detects your **physical Wi-Fi network
    🚀  DropLite - Personal Cloud & Local File Transfer
 =============================================================
   Local URL:        http://localhost:5000
-  LAN Network URL:  http://192.168.1.14:5000
+  LAN Network URL:  http://192.168.123.148:5000
 -------------------------------------------------------------
   Scan this QR code with your phone (Android / iOS):
 
