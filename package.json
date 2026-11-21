@@ -1,0 +1,34 @@
+{
+  "name": "droplite",
+  "version": "1.0.0",
+  "description": "DropLite - Self-Hosted Personal Cloud & Fast File Transfer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test-server.js"
+  },
+  "keywords": [
+    "file-transfer",
+    "airdrop-alternative",
+    "self-hosted",
+    "pwa",
+    "local-cloud",
+    "chunked-upload"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "mime-types": "^2.1.35",
+    "multer": "^1.4.5-lts.1",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Environment Variables & Secrets (Keep .env.example)
+.env
+.env.local
+.env.*.local
+
+# User Uploads & Storage Folders (Keeps files private)
+uploads/*
+!uploads/.gitkeep
+trash/*
+!trash/.gitkeep
+temp_chunks/*
+!temp_chunks/.gitkeep
+data/*
+!data/.gitkeep
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS Metadata & Cache
+.DS_Store
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace

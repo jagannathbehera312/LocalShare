@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shared File - DropLite</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.15), transparent 70%), var(--bg-primary);
+      padding: 20px;
+    }
+    .share-container-box {
+      width: 100%;
+      max-width: 480px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: toastIn 300ms ease-out forwards;
+    }
+    .share-header-badge {
+      background: var(--accent-light);
+      color: var(--accent-primary);
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.78rem;
+      font-weight: 600;
+      width: fit-content;
+      margin: 0 auto 12px;
+    }
+    .share-preview-media {
+      width: 100%;
+      max-height: 260px;
+      object-fit: contain;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      margin-top: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="share-container-box">
+    <div style="padding: 24px; text-align: center; border-bottom: 1px solid var(--border-subtle);">
+      <div class="share-header-badge">DropLite Shared Transfer</div>
+      <div class="file-type-icon" id="share-icon" style="margin: 0 auto 12px; width: 64px; height: 64px; font-size: 1.8rem; background: var(--accent-primary);">
+        📄
+      </div>
+      <h2 id="share-file-name" style="font-size: 1.25rem; font-weight: 700; word-break: break-all; margin-bottom: 6px;">
+        Loading shared file...
+      </h2>
+      <div id="share-file-meta" style="color: var(--text-tertiary); font-size: 0.85rem;">
+        Please wait...
+      </div>
+    </div>
+
+    <!-- Preview Container (For images, videos, audio) -->
+    <div id="share-preview-wrapper" style="display: none; padding: 0 24px;"></div>
+
+    <!-- Password Protected Card -->
+    <div id="share-password-box" style="display: none; padding: 20px 24px;">
+      <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 10px;">
+        🔒 This shared item is protected with a password.
+      </p>
+      <input type="password" id="share-pass-input" class="settings-input" placeholder="Enter password to access" style="width: 100%; height: 42px; margin-bottom: 10px;">
+      <button class="btn-primary" id="btn-unlock-share" style="width: 100%; height: 42px;">Unlock & Download</button>
+      <div id="share-pass-error" style="color: var(--color-danger); font-size: 0.82rem; margin-top: 8px; display: none;"></div>
+    </div>
+
+    <!-- Download Action -->
+    <div id="share-download-box" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+      <button class="btn-primary" id="btn-download-share" style="width: 100%; height: 46px; font-size: 1rem;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span>Download Now</span>
+      </button>
+
+      <!-- Scannable QR code toggle -->
+      <div style="text-align: center; margin-top: 6px;">
+        <button id="btn-toggle-share-qr" style="font-size: 0.82rem; color: var(--text-tertiary);">
+          📱 Open on another phone (Scan QR)
+        </button>
+        <div id="share-qr-view" style="display: none; margin-top: 14px;">
+          <div id="share-qr-img" style="width: 180px; height: 180px; background: #fff; margin: 0 auto; border-radius: var(--radius-md); padding: 8px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expired or Error State -->
+    <div id="share-error-box" style="display: none; padding: 40px 24px; text-align: center;">
+      <div style="font-size: 3rem; margin-bottom: 12px;">⚠️</div>
+      <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 8px;">Share Link Inactive</h3>
+      <p id="share-error-text" style="color: var(--text-tertiary); font-size: 0.9rem;">
+        This share link has expired, exceeded its download limit, or was removed.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const shareId = window.location.pathname.split('/').filter(Boolean).pop();
+    let currentShare = null;
+    let unlockedPassword = '';
+
+    async function loadShareInfo() {
+      try {
+        const res = await fetch(`/api/public/share/${shareId}`);
+        if (!res.ok) {
+          const err = await res.json();
+          showError(err.error || 'Share link not found or expired.');
+          return;
+        }
+
+        currentShare = await res.json();
+        renderShare(currentShare);
+      } catch (err) {
+        showError('Network error connecting to DropLite server.');
+      }
+    }
+
+    function renderShare(share) {
+      document.getElementById('share-file-name').textContent = share.fileName;
+      
+      const metaParts = [share.formattedSize];
+      if (share.expiryDate) {
+        const remainingHours = Math.max(0, Math.round((new Date(share.expiryDate) - Date.now()) / (1000 * 60 * 60)));
+        metaParts.push(`Expires in ~${remainingHours}h`);
+      }
+      if (share.downloadLimit) {
+        metaParts.push(`${share.downloadCount} / ${share.downloadLimit} downloads`);
+      }
+      document.getElementById('share-file-meta').textContent = metaParts.join(' • ');
+
+      // Icon
+      const iconEl = document.getElementById('share-icon');
+      if (share.isDirectory) {
+        iconEl.textContent = '📁';
+        iconEl.style.background = '#f59e0b';
+      } else if (share.category === 'image') {
+        iconEl.textContent = '🖼️';
+        iconEl.style.background = '#8b5cf6';
+      } else if (share.category === 'video') {
+        iconEl.textContent = '🎬';
+        iconEl.style.background = '#ef4444';
+      } else if (share.category === 'audio') {
+        iconEl.textContent = '🎵';
+        iconEl.style.background = '#10b981';
+      } else {
+        iconEl.textContent = '📄';
+        iconEl.style.background = '#3b82f6';
+      }
+
+      if (share.hasPassword) {
+        document.getElementById('share-password-box').style.display = 'block';
+        document.getElementById('share-download-box').style.display = 'none';
+      } else {
+        showDownload();
+      }
+
+      // Load QR code
+      const qrUrl = `/api/qr?text=${encodeURIComponent(window.location.href)}`;
+      document.getElementById('share-qr-img').innerHTML = `<img src="${qrUrl}" style="width:100%; height:100%;">`;
+    }
+
+    function showDownload() {
+      document.getElementById('share-password-box').style.display = 'none';
+      document.getElementById('share-download-box').style.display = 'flex';
+
+      // If previewable image or video
+      if (currentShare && !currentShare.isDirectory) {
+        const previewWrap = document.getElementById('share-preview-wrapper');
+        const previewUrl = `/api/public/share/${shareId}/preview${unlockedPassword ? '?password=' + encodeURIComponent(unlockedPassword) : ''}`;
+        
+        if (currentShare.category === 'image') {
+          previewWrap.innerHTML = `<img src="${previewUrl}" class="share-preview-media" alt="preview">`;
+          previewWrap.style.display = 'block';
+        } else if (currentShare.category === 'video') {
+          previewWrap.innerHTML = `<video src="${previewUrl}" class="share-preview-media" controls></video>`;
+          previewWrap.style.display = 'block';
+        } else if (currentShare.category === 'audio') {
+          previewWrap.innerHTML = `<audio src="${previewUrl}" controls style="width:100%; margin-top:14px;"></audio>`;
+          previewWrap.style.display = 'block';
+        }
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('share-icon').parentElement.style.display = 'none';
+      document.getElementById('share-password-box').style.display = 'none';
+      document.getElementById('share-download-box').style.display = 'none';
+      document.getElementById('share-error-box').style.display = 'block';
+      document.getElementById('share-error-text').textContent = msg;
+    }
+
+    document.getElementById('btn-unlock-share').addEventListener('click', async () => {
+      const pass = document.getElementById('share-pass-input').value.trim();
+      if (!pass) return;
+
+      const res = await fetch(`/api/public/share/${shareId}/download?password=${encodeURIComponent(pass)}`, {
+        method: 'HEAD'
+      });
+
+      if (res.status === 401) {
+        const errEl = document.getElementById('share-pass-error');
+        errEl.textContent = 'Incorrect password. Please try again.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      unlockedPassword = pass;
+      showDownload();
+    });
+
+    document.getElementById('btn-download-share').addEventListener('click', () => {
+      const downloadUrl = `/api/public/share/${shareId}/download${unlockedPassword ? '?password=' + encodeURIComponent(unlockedPassword) : ''}`;
+      window.location.href = downloadUrl;
+    });
+
+    document.getElementById('btn-toggle-share-qr').addEventListener('click', () => {
+      const qrView = document.getElementById('share-qr-view');
+      qrView.style.display = qrView.style.display === 'none' ? 'block' : 'none';
+    });
+
+    loadShareInfo();
+  </script>
+</body>
+</html>
